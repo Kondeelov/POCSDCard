@@ -14,7 +14,7 @@
         app:layout_constraintBottom_toTopOf="@id/progress"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:text="10%" />
+        tools:text="50%" />
 
     <ProgressBar
         android:id="@+id/progress"
@@ -83,6 +83,7 @@
             android:id="@+id/button_sd_card"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
+            android:enabled="false"
             android:layout_height="wrap_content"
             android:minHeight="40dp"
             android:text="SD Card" />

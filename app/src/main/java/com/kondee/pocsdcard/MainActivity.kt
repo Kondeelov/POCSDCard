@@ -1,5 +1,7 @@
 package com.kondee.pocsdcard
 
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -20,6 +22,17 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    private val sdCardStatusReceiver by lazy {
+        SDCardStatusReceiver {
+            viewModel.getSDCardStatus()
+
+            WorkManager.getInstance(this@MainActivity).apply {
+                cancelAllWork()
+                pruneWork()
+            }
+        }
+    }
+
     private val binding: ActivityMainBinding by lazy {
         ActivityMainBinding.inflate(layoutInflater)
     }
@@ -35,7 +48,22 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-//        viewModel.getSDCardStatus()
+        registerReceiver(
+            sdCardStatusReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_MEDIA_MOUNTED)
+                addAction(Intent.ACTION_MEDIA_UNMOUNTED)
+                addDataScheme("file")
+            }
+        )
+
+        viewModel.getSDCardStatus()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        unregisterReceiver(sdCardStatusReceiver)
     }
 
     private fun initView() {
@@ -46,7 +74,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.buttonDelete.setOnClickListener {
-            viewModel.deleteFile()
+            val dialog = AlertDialog.Builder(this@MainActivity)
+                .setTitle("Confirm Deletion!")
+                .setMessage("Would you like to delete the file in a storage?")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Confirm") { _, _ ->
+                    viewModel.deleteFile()
+                }
+                .create()
+            dialog.show()
         }
 
         binding.toggleGroupDownloadLocation.addOnButtonCheckedListener(onButtonCheckedListener)
@@ -80,17 +116,21 @@ class MainActivity : AppCompatActivity() {
                     is FileStatus.Downloaded -> {
                         binding.textViewFilePath.text = fileStatus.fileLocation
                     }
+
                     is FileStatus.Downloading -> {
                         binding.textViewFilePath.text = "-"
                         binding.progress.progress = fileStatus.progress
                         binding.textViewProgress.text = "${fileStatus.progress}%"
                     }
+
                     is FileStatus.Error -> {
                         binding.textViewFilePath.text = "-"
                     }
+
                     FileStatus.Moving -> {
                         binding.textViewFilePath.text = "-"
                     }
+
                     FileStatus.Idle -> {
                         binding.textViewFilePath.text = "-"
                     }
@@ -120,6 +160,7 @@ class MainActivity : AppCompatActivity() {
                 DownloadLocation.Internal -> {
                     binding.buttonInternal.id
                 }
+
                 DownloadLocation.SDCard -> {
                     binding.buttonSdCard.id
                 }
@@ -129,12 +170,13 @@ class MainActivity : AppCompatActivity() {
         binding.toggleGroupDownloadLocation.addOnButtonCheckedListener(onButtonCheckedListener)
     }
 
-    fun showDialogMoveFiles(destinationLocation: DownloadLocation) {
+    private fun showDialogMoveFiles(destinationLocation: DownloadLocation) {
 
         val destination = when (destinationLocation) {
             DownloadLocation.Internal -> {
                 "พื้นที่เครื่อง"
             }
+
             DownloadLocation.SDCard -> {
                 "SD Card"
             }
@@ -144,7 +186,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage(
                 String.format(
                     "คุณต้องการย้ายไฟล์ที่ดาวน์โหลดแล้ว ไปเก็บไว้ใน %s ด้วยหรือไม่\n" +
-                        "หากไม่ย้าย ไฟล์ในเครื่องจะถูกลบ", destination
+                            "หากไม่ย้าย ไฟล์ในเครื่องจะถูกลบ", destination
                 )
             )
             .setPositiveButton("ย้ายเลย") { _, _ ->
@@ -173,16 +215,18 @@ class MainActivity : AppCompatActivity() {
      * Listener
      */
 
-    private val onButtonCheckedListener = MaterialButtonToggleGroup.OnButtonCheckedListener { _, checkedId, isChecked ->
-        if (isChecked) {
-            when (checkedId) {
-                binding.buttonInternal.id -> {
-                    showDialogMoveFiles(DownloadLocation.Internal)
-                }
-                binding.buttonSdCard.id -> {
-                    showDialogMoveFiles(DownloadLocation.SDCard)
+    private val onButtonCheckedListener =
+        MaterialButtonToggleGroup.OnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    binding.buttonInternal.id -> {
+                        showDialogMoveFiles(DownloadLocation.Internal)
+                    }
+
+                    binding.buttonSdCard.id -> {
+                        showDialogMoveFiles(DownloadLocation.SDCard)
+                    }
                 }
             }
         }
-    }
 }

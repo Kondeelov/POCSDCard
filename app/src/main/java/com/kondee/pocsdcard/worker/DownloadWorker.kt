@@ -36,6 +36,8 @@ class DownloadWorker(
     override suspend fun doWork(): Result {
         try {
 
+            isStopped
+
             val urlString = inputData.getString(KEY_URL) ?: return Result.failure()
 
             val downloadLocation = downloadLocationDataStore.data.map {
@@ -63,29 +65,6 @@ class DownloadWorker(
             }
 
             return downloadFile(urlString, file)
-
-//            val url = URL(urlString)
-//
-////            val connection = url.openConnection()
-////            connection.connect()
-////            val size = connection.contentLength
-//
-//
-//            Log.i("Kondee", "size: ${getFileSize(url)}")
-////            url.openStream().use { input ->
-////                file.outputStream().use { output ->
-////                    input.copyTo(output) { bytesCopied ->
-////                        val progress = (bytesCopied.toDouble() / size.toDouble() * 100.0).toInt()
-////                        setProgress(progress)
-////                    }
-////                }
-////            }
-
-//            setProgress(100)
-
-//            return Result.success(
-//                workDataOf(KEY_FILE_LOCATION to file.absolutePath)
-//            )
         } catch (e: Exception) {
             return Result.failure(
                 workDataOf(KEY_ERROR_MESSAGE to e.message)
@@ -96,12 +75,8 @@ class DownloadWorker(
     private suspend fun downloadFile(url: String, file: File): Result {
         var inputStream: InputStream? = null
         var outputStream: FileOutputStream? = null
-//        val file: File
+
         try {
-//            file = File(downloadPath)
-//            if (!file.mkdirs()) {
-//                return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "Can not create folder."))
-//            }
 
             val client = OkHttpClient()
             val request: Request = Request.Builder().url(url).build()

@@ -43,7 +43,17 @@ class MainViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val sdCardDirectory = Utils.sdCardDirectory(application.applicationContext)
-                _sdCardAvailableFlow.emit(sdCardDirectory != null)
+                val sdCardAvailable = sdCardDirectory != null
+                _sdCardAvailableFlow.emit(sdCardAvailable)
+
+                val downloadLocation = downloadLocationFlow.first()
+                if (downloadLocation == DownloadLocation.SDCard && !sdCardAvailable) {
+                    downloadLocationDataStore.edit { prefs ->
+                        prefs[DataStore.downloadLocationPreferenceKey] = DownloadLocation.Internal.ordinal
+                    }
+                }
+
+                checkFileStatus()
             }
         }
     }
@@ -174,6 +184,5 @@ class MainViewModel(
 
     init {
         getSDCardStatus()
-        checkFileStatus()
     }
 }
